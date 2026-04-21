@@ -1,0 +1,35 @@
+# Backend (Laravel)
+backend/vendor/
+backend/.env
+backend/.env.local
+backend/.env.*.local
+backend/storage/
+backend/bootstrap/cache/
+backend/node_modules/
+backend/npm-debug.log
+backend/*.log
+backend/.DS_Store
+backend/Thumbs.db
+
+# Frontend (React/Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log
+frontend/yarn-error.log
+frontend/.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
