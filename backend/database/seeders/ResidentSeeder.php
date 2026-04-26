@@ -24,6 +24,8 @@ class ResidentSeeder extends Seeder
             'password' => bcrypt('password123'),
         ]);
 
+        \App\Models\Residents::factory()->count(10)->create();
+
         // Create an incident for this resident
         \App\Models\Incidents::create([
             'resident_id' => $resident->id,

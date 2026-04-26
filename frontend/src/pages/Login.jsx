@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Alert from '@/components/Alert';
-import { LogIn } from 'lucide-react';
 import { authAPI } from '@/services/api';
+import logo from '@/assets/logo.png'; 
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -13,34 +13,26 @@ function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'admin', // admin or resident
+    role: 'admin',
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       if (formData.role === 'admin') {
         if (formData.email === 'admin@sia.com' && formData.password === 'admin123') {
-          login({
-            id: 1,
-            name: 'Administrator',
-            email: formData.email,
-            role: 'admin',
-          });
+          login({ id: 1, name: 'Administrator', email: formData.email, role: 'admin' });
           setAlert({ type: 'success', message: 'Login successful!' });
           setTimeout(() => navigate('/'), 1500);
         } else {
           setAlert({ type: 'error', message: 'Invalid admin credentials' });
         }
       } else {
-        // Resident login - verify with backend
         const response = await authAPI.loginResident({
           email: formData.email,
           password: formData.password,
         });
-
         const resident = response.data.data;
         login({
           id: resident.id,
@@ -52,60 +44,54 @@ function LoginPage() {
         setTimeout(() => navigate('/resident-dashboard'), 1500);
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Invalid credentials';
-      setAlert({ type: 'error', message: errorMessage });
+      setAlert({ type: 'error', message: error.response?.data?.message || 'Invalid credentials' });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="bg-white rounded-lg shadow-lg p-4 mb-4 inline-flex">
-            <LogIn size={40} className="text-blue-600" />
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 w-full max-w-md overflow-hidden">
+        {/* Adjusted Logo and Header Area */}
+        <div className="pt-12 pb-6 px-8 text-center bg-white">
+          <div className="mb-6 inline-flex">
+            <img 
+              src={logo} 
+              alt="Simplipika Logo" 
+              className="w-48 h-auto object-contain" 
+              onError={(e) => e.target.src = 'https://via.placeholder.com/150?text=Logo'} 
+            />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">SIA System</h1>
-          <p className="text-blue-100">Social Assistance Information System</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">SIA System</h1>
+          <p className="text-gray-500 text-sm font-medium mt-1">Social Assistance Information System</p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-white rounded-lg shadow-2xl p-8">
+        <div className="px-8 pb-8">
           {alert && (
-            <Alert
-              type={alert.type}
-              message={alert.message}
-              onClose={() => setAlert(null)}
-            />
+            <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />
           )}
 
-          <form onSubmit={handleSubmit}>
-            {/* Role Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Login As
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                Account Type
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-0 border border-gray-100 rounded-lg overflow-hidden bg-gray-50 p-1">
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, role: 'admin' })}
-                  className={`py-2 px-4 rounded-lg font-medium transition-colors ${
-                    formData.role === 'admin'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  className={`py-2.5 text-xs font-bold rounded-md transition-all ${
+                    formData.role === 'admin' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  Admin
+                  Administrator
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, role: 'resident' })}
-                  className={`py-2 px-4 rounded-lg font-medium transition-colors ${
-                    formData.role === 'resident'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  className={`py-2.5 text-xs font-bold rounded-md transition-all ${
+                    formData.role === 'resident' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
                   Resident
@@ -113,73 +99,48 @@ function LoginPage() {
               </div>
             </div>
 
-            {/* Demo Credentials Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm">
-              {formData.role === 'admin' ? (
-                <>
-                  <p className="font-semibold text-gray-800 mb-2">Demo Admin Credentials:</p>
-                  <p className="text-gray-700">Email: <span className="font-mono">admin@sia.com</span></p>
-                  <p className="text-gray-700">Password: <span className="font-mono">admin123</span></p>
-                </>
-              ) : (
-                <>
-                  <p className="font-semibold text-gray-800 mb-2">Resident Login:</p>
-                  <p className="text-gray-700">Use your registered email and password</p>
-                </>
-              )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm"
+                  placeholder="admin@sia.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
+              </div>
             </div>
 
-            {/* Email Field */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                placeholder={formData.role === 'admin' ? 'admin@sia.com' : 'your@email.com'}
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            {/* Password Field */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                placeholder={formData.role === 'admin' ? 'admin123' : '••••••••'}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 rounded-lg transition-colors mb-4"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-md shadow-blue-100 transition-all disabled:opacity-50 mt-2"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? 'Authenticating...' : 'Sign In'}
             </button>
-
-            {/* Register Link */}
-            <p className="text-center text-gray-600 text-sm">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-blue-600 hover:underline font-medium">
-                Register here
-              </Link>
-            </p>
           </form>
+        </div>
 
-          {/* Footer */}
-          <p className="text-center text-gray-600 text-sm mt-6">
-            Protected by authentication system
+        <div className="bg-gray-50 border-t border-gray-100 py-6 text-center">
+          <p className="text-xs text-gray-500 font-medium">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-blue-600 hover:underline font-bold">
+              Register here
+            </Link>
           </p>
         </div>
       </div>
@@ -188,3 +149,5 @@ function LoginPage() {
 }
 
 export default LoginPage;
+
+
