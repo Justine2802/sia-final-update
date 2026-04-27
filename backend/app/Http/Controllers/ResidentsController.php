@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Residents;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Models\ResidentActivity;
+
 
 class ResidentsController extends Controller
 {
@@ -51,6 +53,17 @@ class ResidentsController extends Controller
             'data' => $resident
         ], 201);
     }
+
+    // This function will get the history for a specific resident
+public function getActivityHistory($id)
+{
+    $activities = ResidentActivity::where('resident_id', $id)
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+
+    return response()->json($activities);
+}
+
 
     /**
      * Login resident

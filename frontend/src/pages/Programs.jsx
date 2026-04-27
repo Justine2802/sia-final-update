@@ -1,231 +1,121 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Search, BookOpen, DollarSign, Edit3, Trash2, Briefcase } from 'lucide-react';
-import { programsAPI } from '@/services/api';
-import Modal from '@/components/Modal';
-import Alert from '@/components/Alert';
-import Loading from '@/components/Loading';
-import Table from '@/components/Table';
-import { FormInput, FormTextarea, FormSelect } from '@/components/FormFields';
+import React, { useState } from 'react';
+import { Search, Plus, Edit2, Trash2, LayoutGrid, Calendar } from 'lucide-react';
+import ProgramModal from './ProgramModal'; // We will create this next
 
-function ProgramsPage() {
-  const [programs, setProgramsData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [alert, setAlert] = useState(null);
+const Programs = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const [formData, setFormData] = useState({
-    program_name: '',
-    description: '',
-    budget_allocation: '',
-  });
+  // Static Data for Read (R) functionality
+  const [programs, setPrograms] = useState([
+    { id: 1, name: 'Senior Citizen Pension', description: 'Pension for senior citizens', budget: '₱500.00', status: 'ACTIVE', implementation_date: '2026-05-01' },
+    { id: 2, name: 'Rice Distribution', description: 'Monthly rice subsidy', budget: '₱50.00', status: 'ACTIVE', implementation_date: null },
+  ]);
 
-  const programOptions = [
-    { label: 'Senior Citizen Pension', value: 'Senior Citizen Pension' },
-    { label: 'TUPAD', value: 'TUPAD' },
-    { label: 'Rice Distribution', value: 'Rice Distribution' },
-    { label: 'Financial Aid', value: 'Financial Aid' },
-  ];
-
-  useEffect(() => {
-    fetchPrograms();
-  }, []);
-
-  const fetchPrograms = async () => {
-    try {
-      setLoading(true);
-      const response = await programsAPI.getAll();
-      setProgramsData(Array.isArray(response.data) ? response.data : response.data.data || []);
-    } catch (error) {
-      setAlert({ type: 'error', message: 'Failed to load social assistance programs.' });
-    } finally {
-      setLoading(false);
-    }
+  // CREATE (C) - Open empty modal
+  const handleCreate = () => {
+    setSelectedProgram(null);
+    setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingId) {
-        await programsAPI.update(editingId, formData);
-        setAlert({ type: 'success', message: 'Program details updated.' });
-      } else {
-        await programsAPI.create(formData);
-        setAlert({ type: 'success', message: 'New assistance program created.' });
-      }
-      setShowModal(false);
-      await fetchPrograms(); // Sync background
-    } catch (error) {
-      setAlert({ type: 'error', message: error.response?.data?.message || 'Check inputs and try again.' });
-    }
-  };
-
+  // UPDATE (U) - Open modal with data
   const handleEdit = (program) => {
-    setEditingId(program.id);
-    setFormData({
-      program_name: program.program_name || '',
-      description: program.description || '',
-      budget_allocation: program.budget_allocation || '',
-    });
-    setShowModal(true);
+    setSelectedProgram(program);
+    setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this program? This will affect all current enrollments.')) return;
-    try {
-      await programsAPI.delete(id);
-      // Optimistic UI Update: Filter local state immediately
-      setProgramsData(prev => prev.filter(item => item.id !== id));
-      setAlert({ type: 'success', message: 'Program successfully archived/removed.' });
-      fetchPrograms(); // background sync
-    } catch (error) {
-      setAlert({ type: 'error', message: 'Cannot delete program while residents are enrolled.' });
+  // DELETE (D) - Remove from list
+  const handleDelete = (id) => {
+    if (window.confirm("Are you sure you want to delete this program?")) {
+      setPrograms(programs.filter(p => p.id !== id));
     }
   };
-
-  const filteredPrograms = programs.filter(p => 
-    p.program_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const columns = [
-    { 
-      key: 'program_name', 
-      label: 'Program Name',
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shadow-sm">
-            <Briefcase size={20} />
-          </div>
-          <div>
-            <p className="font-bold text-gray-900">{row.program_name}</p>
-            <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Active Program</p>
-          </div>
-        </div>
-      )
-    },
-    { 
-      key: 'description', 
-      label: 'Description',
-      render: (row) => (
-        <p className="text-xs text-gray-500 max-w-[250px] whitespace-normal line-clamp-2 leading-relaxed">
-          {row.description}
-        </p>
-      )
-    },
-    {
-      key: 'budget_allocation',
-      label: 'Budget Allocation',
-      render: (row) => (
-        <div className="flex flex-col">
-          <span className="text-sm font-black text-gray-900">
-            ₱{parseFloat(row.budget_allocation).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </span>
-          <span className="text-[10px] text-gray-400 font-bold uppercase">Allocated Fund</span>
-        </div>
-      ),
-    },
-  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-8 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Assistance Programs</h1>
+          <h1 className="text-2xl font-black text-gray-800 tracking-tight">Assistance Programs</h1>
           <p className="text-gray-500 font-medium">Manage and monitor social services distribution.</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingId(null);
-            setFormData({ program_name: '', description: '', budget_allocation: '' });
-            setShowModal(true);
-          }}
-          className="flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg"
+        <button 
+          onClick={handleCreate}
+          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-xl hover:bg-emerald-700 transition shadow-lg shadow-emerald-100 font-black text-[11px] uppercase tracking-widest"
         >
-          <Plus size={20} />
-          Create Program
+          <Plus size={18} /> Create Program
         </button>
       </div>
 
-      {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
-
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-5 border-b border-gray-50 bg-gray-50/30">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search programs..." 
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          data={filteredPrograms}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          loading={loading}
+      {/* Search (R) */}
+      <div className="relative mb-6 max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <input 
+          type="text" 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search programs..." 
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/5 transition outline-none font-bold text-sm"
         />
       </div>
 
-      <Modal 
-        isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
-        title={editingId ? 'Edit Program Details' : 'Initialize New Program'}
-      >
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <FormSelect
-            label="Program Name"
-            options={programOptions}
-            value={formData.program_name}
-            onChange={(e) => setFormData({ ...formData, program_name: e.target.value })}
-            required
-          />
+      {/* Table (R) */}
+      <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50/50 border-b border-gray-100">
+            <tr>
+              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Program Details</th>
+              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Budget</th>
+              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Implementation</th>
+              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {programs.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map((prog) => (
+              <tr key={prog.id} className="hover:bg-gray-50/50 transition group">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                      <LayoutGrid size={20} />
+                    </div>
+                    <div>
+                      <div className="font-black text-gray-800 text-sm tracking-tight">{prog.name}</div>
+                      <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter">{prog.status}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="font-black text-gray-800">{prog.budget}</div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase">Allocated</div>
+                </td>
+                <td className="px-6 py-4">
+                  {prog.implementation_date ? (
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-lg w-fit">
+                      <Calendar size={14} className="text-emerald-500" />
+                      {prog.implementation_date}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-bold text-gray-300 italic">No Date Set</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-right space-x-1">
+                  <button onClick={() => handleEdit(prog)} className="p-2 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"><Edit2 size={18} /></button>
+                  <button onClick={() => handleDelete(prog.id)} className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 size={18} /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-          <FormTextarea
-            label="Program Description"
-            placeholder="Describe the scope and requirements of this program..."
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            required
-            rows="4"
-          />
-
-          <div className="relative">
-             <label className="block text-sm font-semibold text-gray-700 mb-1">Budget Allocation</label>
-             <div className="relative">
-               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₱</span>
-               <input 
-                type="number" 
-                step="0.01"
-                placeholder="0.00"
-                className="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                value={formData.budget_allocation}
-                onChange={(e) => setFormData({ ...formData, budget_allocation: e.target.value })}
-                required
-               />
-             </div>
-          </div>
-
-          <div className="flex gap-3 pt-6 border-t border-gray-100">
-            <button type="submit" className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all shadow-md">
-              {editingId ? 'Save Changes' : 'Launch Program'}
-            </button>
-            <button type="button" onClick={() => setShowModal(false)} className="px-6 bg-gray-100 text-gray-500 font-bold rounded-xl hover:bg-gray-200 transition-all">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </Modal>
+      <ProgramModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        program={selectedProgram}
+      />
     </div>
   );
-}
+};
 
-export default ProgramsPage;
-
-
-
+export default Programs;

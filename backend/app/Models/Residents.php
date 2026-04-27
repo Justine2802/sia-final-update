@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+
+
 class Residents extends Model
 {
     protected $fillable = [
@@ -18,4 +20,9 @@ class Residents extends Model
     ];
 
     protected $hidden = ['password'];
+
+    public function activities()
+{
+    return $this->hasMany(ResidentActivity::class)->latest();
+}
 }
