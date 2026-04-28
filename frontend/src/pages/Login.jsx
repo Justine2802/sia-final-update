@@ -21,14 +21,26 @@ function LoginPage() {
     setLoading(true);
     try {
       if (formData.role === 'admin') {
-        if (formData.email === 'admin@sia.com' && formData.password === 'admin123') {
-          login({ id: 1, name: 'Administrator', email: formData.email, role: 'admin' });
-          setAlert({ type: 'success', message: 'Login successful!' });
-          setTimeout(() => navigate('/'), 1500);
-        } else {
-          setAlert({ type: 'error', message: 'Invalid admin credentials' });
-        }
+        // NEW: Call the backend for admin authentication
+        const response = await authAPI.loginAdmin({
+          email: formData.email,
+          password: formData.password,
+        });
+        
+        const admin = response.data.data; // Adjust this path if your API returns data differently
+        
+        login({ 
+          id: admin.id, 
+          name: admin.name || 'Administrator', 
+          email: admin.email, 
+          role: 'admin' 
+        });
+        
+        setAlert({ type: 'success', message: 'Admin login successful!' });
+        setTimeout(() => navigate('/'), 1500);
+        
       } else {
+        // Resident login remains the same
         const response = await authAPI.loginResident({
           email: formData.email,
           password: formData.password,
@@ -39,6 +51,10 @@ function LoginPage() {
           name: `${resident.first_name} ${resident.last_name}`,
           email: resident.email,
           role: 'resident',
+          phone: resident.phone,
+          birth_date: resident.birth_date,
+          address: resident.address,
+          is_verified: resident.is_verified
         });
         setAlert({ type: 'success', message: 'Login successful!' });
         setTimeout(() => navigate('/resident-dashboard'), 1500);

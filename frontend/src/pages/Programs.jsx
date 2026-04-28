@@ -1,36 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, LayoutGrid, Calendar } from 'lucide-react';
-import ProgramModal from './ProgramModal'; // We will create this next
+import ProgramModal from './ProgramModal';
+import { programsAPI } from '@/services/api';
+import Loading from '@/components/Loading';
 
 const Programs = () => {
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Static Data for Read (R) functionality
-  const [programs, setPrograms] = useState([
-    { id: 1, name: 'Senior Citizen Pension', description: 'Pension for senior citizens', budget: '₱500.00', status: 'ACTIVE', implementation_date: '2026-05-01' },
-    { id: 2, name: 'Rice Distribution', description: 'Monthly rice subsidy', budget: '₱50.00', status: 'ACTIVE', implementation_date: null },
-  ]);
+  // 1. Fetch programs from the database
+  const fetchPrograms = async () => {
+    setLoading(true);
+    try {
+      const response = await programsAPI.getAll();
+      setPrograms(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch programs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // CREATE (C) - Open empty modal
+  useEffect(() => {
+    fetchPrograms();
+  }, []);
+
+  // Format budget to Peso
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+    }).format(amount);
+  };
+
+  // CREATE (C)
   const handleCreate = () => {
     setSelectedProgram(null);
     setIsModalOpen(true);
   };
 
-  // UPDATE (U) - Open modal with data
+  // UPDATE (U)
   const handleEdit = (program) => {
     setSelectedProgram(program);
     setIsModalOpen(true);
   };
 
-  // DELETE (D) - Remove from list
-  const handleDelete = (id) => {
+  // DELETE (D)
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this program?")) {
-      setPrograms(programs.filter(p => p.id !== id));
+      try {
+        await programsAPI.delete(id);
+        setPrograms(programs.filter(p => p.id !== id));
+      } catch (error) {
+        alert("Could not delete program. It might have active enrollees.");
+      }
     }
   };
+
+  if (loading) return <Loading />;
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -48,7 +78,7 @@ const Programs = () => {
         </button>
       </div>
 
-      {/* Search (R) */}
+      {/* Search */}
       <div className="relative mb-6 max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
         <input 
@@ -60,19 +90,21 @@ const Programs = () => {
         />
       </div>
 
-      {/* Table (R) */}
+      {/* Table */}
       <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50/50 border-b border-gray-100">
             <tr>
               <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Program Details</th>
-              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Budget</th>
-              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Implementation</th>
+              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Budget Allocation</th>
+              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date Created</th>
               <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {programs.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map((prog) => (
+            {programs
+              .filter(p => p.program_name.toLowerCase().includes(searchTerm.toLowerCase()))
+              .map((prog) => (
               <tr key={prog.id} className="hover:bg-gray-50/50 transition group">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
@@ -80,24 +112,20 @@ const Programs = () => {
                       <LayoutGrid size={20} />
                     </div>
                     <div>
-                      <div className="font-black text-gray-800 text-sm tracking-tight">{prog.name}</div>
-                      <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter">{prog.status}</div>
+                      <div className="font-black text-gray-800 text-sm tracking-tight">{prog.program_name}</div>
+                      <div className="text-[9px] text-gray-400 font-bold uppercase truncate max-w-[200px]">{prog.description}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="font-black text-gray-800">{prog.budget}</div>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase">Allocated</div>
+                  <div className="font-black text-gray-800">{formatCurrency(prog.budget_allocation)}</div>
+                  <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter">Active Fund</div>
                 </td>
                 <td className="px-6 py-4">
-                  {prog.implementation_date ? (
-                    <div className="flex items-center gap-2 text-xs font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-lg w-fit">
-                      <Calendar size={14} className="text-emerald-500" />
-                      {prog.implementation_date}
-                    </div>
-                  ) : (
-                    <span className="text-[10px] font-bold text-gray-300 italic">No Date Set</span>
-                  )}
+                  <div className="flex items-center gap-2 text-xs font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-lg w-fit">
+                    <Calendar size={14} className="text-emerald-500" />
+                    {new Date(prog.created_at).toLocaleDateString()}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-right space-x-1">
                   <button onClick={() => handleEdit(prog)} className="p-2 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"><Edit2 size={18} /></button>
@@ -107,11 +135,19 @@ const Programs = () => {
             ))}
           </tbody>
         </table>
+        {programs.length === 0 && (
+          <div className="p-12 text-center text-gray-400 font-bold italic">
+            No active programs registered in the system.
+          </div>
+        )}
       </div>
 
       <ProgramModal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        onClose={() => {
+          setIsModalOpen(false);
+          fetchPrograms(); // Refresh after C/U operations
+        }} 
         program={selectedProgram}
       />
     </div>

@@ -32,24 +32,31 @@ class ResidentsController extends Controller
      */
     public function register(Request $request)
     {
+        // 1. Validate the incoming React data
         $validated = $request->validate([
             'first_name' => 'required|string|max:50',
-            'last_name'  => 'required|string|max:50',
-            'email'      => 'required|email|unique:residents,email',
-            'phone'      => 'nullable|string|max:20',
+            'last_name' => 'required|string|max:50',
+            'email' => 'required|email|unique:residents,email',
+            'phone' => 'nullable|string|max:20',
             'birth_date' => 'required|date',
-            'address'    => 'required|string|max:255',
-            'password'   => 'required|string|min:6',
+            'address' => 'required|string|max:255',
+            'password' => 'required|string|min:6', // React is checking for 6 chars
         ]);
 
-        // Hash the password
-        $validated['password'] = Hash::make($validated['password']);
-        $validated['is_verified'] = false; // New residents start as unverified
+        // 2. Create the Resident and HASH the password
+        $resident = Residents::create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'birth_date' => date('Y-m-d H:i:s', strtotime($validated['birth_date'])),
+            'address' => $validated['address'],
+            'password' => Hash::make($validated['password']), // NEVER save raw passwords!
+        ]);
 
-        $resident = Residents::create($validated);
-
+        // 3. Return the response in the exact format React is expecting
         return response()->json([
-            'message' => 'Registration successful. Please wait for verification.',
+            'message' => 'Account created successfully',
             'data' => $resident
         ], 201);
     }

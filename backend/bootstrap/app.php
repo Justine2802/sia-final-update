@@ -11,17 +11,27 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        
+        // 1. Tell Laravel what 'is_admin' means
+        $middleware->alias([
+            'is_admin' => \App\Http\Middleware\IsAdmin::class,
+        ]);
+
+        // 2. Your existing CSRF exclusions
         $middleware->validateCsrfTokens(except: [
-            'residents',
-            'residents/*',
-            'incidents',
-            'incidents/*',
-            'certificates',
-            'certificates/*',
-            'programs',
-            'programs/*',
-            'prog_res',
-            'prog_res/*',
+            'residents/login',
+            'residents/register',
+            'admin/residents',
+            'admin/residents/*',
+            'admin/incidents',
+            'admin/incidents/*',
+            'admin/certificates',
+            'admin/certificates/*',
+            'admin/programs',
+            'admin/programs/*',
+            'admin/prog_res',
+            'admin/prog_res/*',
+            'admin/login',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -11,15 +11,17 @@ class Residents extends Model
     protected $fillable = [
         'first_name',
         'last_name',
-        'email',
-        'phone',
         'birth_date',
         'address',
+        'is_verified',
+        'email',
+        'phone',
         'password',
-        'is_verified'
     ];
 
-    protected $hidden = ['password'];
+    protected $hidden = [
+        'password',
+    ];
 
     public function activities()
 {

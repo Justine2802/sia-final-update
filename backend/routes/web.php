@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificatesController;
 use App\Http\Controllers\IncidentsController;
 use App\Http\Controllers\ProgramResidentsController;
@@ -15,6 +16,8 @@ Route::get('/', function () {
 // Authentication Routes
 Route::post('/residents/register', [ResidentsController::class, 'register']);
 Route::post('/residents/login', [ResidentsController::class, 'login']);
+
+Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 
 // Admin Protected Routes
 Route::prefix('admin')->middleware(['auth', 'is_admin'])->group(function () {

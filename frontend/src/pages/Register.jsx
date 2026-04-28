@@ -61,7 +61,17 @@ function RegisterPage() {
         birth_date: formData.birthDate, address: formData.address, password: formData.password,
       });
       const resident = response.data.data;
-      login({ id: resident.id, name: `${resident.first_name} ${resident.last_name}`, email: resident.email, role: 'resident' });
+      login({
+        id: resident.id,
+        name: `${resident.first_name} ${resident.last_name}`,
+        email: resident.email,
+        role: 'resident',
+        // ADD THESE 4 LINES:
+        phone: resident.phone,
+        birth_date: resident.birth_date,
+        address: resident.address,
+        is_verified: resident.is_verified
+      });
       setAlert({ type: 'success', message: 'Account created!' });
       setTimeout(() => navigate('/resident-dashboard'), 1500);
     } catch (error) {
@@ -92,10 +102,10 @@ function RegisterPage() {
           {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            <InputField label="First Name" name="firstName" value={formData.firstName} onChange={handleInputChange} error={errors.firstName} placeholder="Ivan" />
-            <InputField label="Last Name" name="lastName" value={formData.lastName} onChange={handleInputChange} error={errors.lastName} placeholder="Dequiros" />
-            <InputField label="Email Address" name="email" type="email" value={formData.email} onChange={handleInputChange} error={errors.email} placeholder="ivan@example.com" />
-            <InputField label="Phone Number" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="0912..." />
+            <InputField label="First Name" name="firstName" value={formData.firstName} onChange={handleInputChange} error={errors.firstName} placeholder="John" />
+            <InputField label="Last Name" name="lastName" value={formData.lastName} onChange={handleInputChange} error={errors.lastName} placeholder="Doe" />
+            <InputField label="Email Address" name="email" type="email" value={formData.email} onChange={handleInputChange} error={errors.email} placeholder="john@example.com" />
+            <InputField label="Phone Number" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="09123456789" />
             <InputField label="Date of Birth" name="birthDate" type="date" value={formData.birthDate} onChange={handleInputChange} />
             <InputField label="Address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Full Address" />
             <InputField label="Password" name="password" type="password" value={formData.password} onChange={handleInputChange} error={errors.password} />

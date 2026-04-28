@@ -1,43 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Clock } from 'lucide-react';
 import ResidentHistoryModal from './ResidentHistoryModal';
-import AddResidentModal from './AddResidentModal'; // Ensure this file exists
+import AddResidentModal from './AddResidentModal';
+import { residentsAPI } from '@/services/api'; // Use the API with the /admin prefix
+import Loading from '@/components/Loading';
 
 const Residents = () => {
-  // 1. All States must be inside the component
+  const [residents, setResidents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedResident, setSelectedResident] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  
 
-  // Static Data
-  const [residents, setResidents] = useState([
-    { id: '#0001', name: 'Ivan Dequiros', birthDate: '4/27/2026', address: 'Pandan Angeles', status: 'PENDING' },
-    { id: '#0002', name: 'Recy Dequiros', birthDate: '4/27/2026', address: 'San Roque Hall, Main St...', status: 'PENDING' },
-  ]);
+  // 1. Fetch real residents from the database
+  const fetchResidents = async () => {
+    setLoading(true);
+    try {
+      const response = await residentsAPI.getAll();
+      setResidents(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch residents:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchResidents();
+  }, []);
 
   // BUTTON ACTIONS
   const handleAdd = () => {
-  setSelectedResident(null); // Clear any previous selection
-  setIsAddModalOpen(true);
-};
+    setSelectedResident(null);
+    setIsAddModalOpen(true);
+  };
   
-  
-const handleEdit = (resident) => {
-  setSelectedResident(resident); // Load this resident's data
-  setIsAddModalOpen(true);
-};
+  const handleEdit = (resident) => {
+    setSelectedResident(resident);
+    setIsAddModalOpen(true);
+  };
 
-  const handleDelete = (id) => {
-    const confirm = window.confirm("Delete this resident record?");
-    if(confirm) setResidents(residents.filter(r => r.id !== id));
+  // 2. Real Backend Delete
+  const handleDelete = async (id) => {
+    const confirm = window.confirm("Are you sure you want to delete this resident record?");
+    if (confirm) {
+      try {
+        await residentsAPI.delete(id);
+        setResidents(residents.filter(r => r.id !== id));
+      } catch (error) {
+        alert("Failed to delete record. Please try again.");
+      }
+    }
   };
 
   const handleViewHistory = (resident) => {
     setSelectedResident(resident);
     setIsHistoryOpen(true);
   };
+
+  // 3. Helper to format full name for search and display
+  const getFullName = (res) => `${res.first_name} ${res.last_name}`;
+
+  if (loading) return <Loading />;
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -79,13 +104,15 @@ const handleEdit = (resident) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {residents.filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase())).map((res) => (
+            {residents
+              .filter(r => getFullName(r).toLowerCase().includes(searchTerm.toLowerCase()))
+              .map((res) => (
               <tr key={res.id} className="hover:bg-gray-50/50 transition group">
                 <td className="px-6 py-4">
-                    <div className="font-black text-gray-800 text-sm tracking-tight">{res.name}</div>
-                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">ID: {res.id}</div>
+                    <div className="font-black text-gray-800 text-sm tracking-tight">{getFullName(res)}</div>
+                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">ID: #{res.id}</div>
                 </td>
-                <td className="px-6 py-4 text-sm font-bold text-gray-500">{res.birthDate}</td>
+                <td className="px-6 py-4 text-sm font-bold text-gray-500">{res.birth_date}</td>
                 <td className="px-6 py-4 text-sm font-bold text-gray-500">{res.address}</td>
                 <td className="px-6 py-4 text-right space-x-1">
                   <button 
@@ -114,13 +141,20 @@ const handleEdit = (resident) => {
             ))}
           </tbody>
         </table>
+        {residents.length === 0 && (
+          <div className="p-12 text-center text-gray-400 font-bold italic">
+            No resident records found.
+          </div>
+        )}
       </div>
 
-      {/* 2. MODAL COMPONENTS */}
       <AddResidentModal 
         isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        resident={selectedResident} // Pass for editing
+        onClose={() => {
+          setIsAddModalOpen(false);
+          fetchResidents(); // Refresh list after adding/editing
+        }} 
+        resident={selectedResident} 
       />
 
       <ResidentHistoryModal 
