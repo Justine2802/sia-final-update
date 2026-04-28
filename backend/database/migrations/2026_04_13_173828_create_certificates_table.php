@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('resident_id')->constrained('residents')->onDelete('cascade');
             $table->enum('certificate_type', ['Barangay Clearance', 'Indigency', 'Residency']);
             $table->enum('purpose', ['Employment', 'Education', 'Legal', 'General']);
-            $table->enum('status', ['Requested', 'Processing', 'Issued', 'Denied'])->default('Requested');
+            $table->enum('status', ['Requested', 'Processing', 'Issued', 'Denied', 'Paid'])->default('Requested');
             $table->dateTime('issued_at')->nullable();
             $table->timestamps();
         });

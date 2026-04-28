@@ -24,7 +24,7 @@ function ResidentCertificates() {
         resident_id: user.id, 
         certificate_type: formData.certificate_type,
         purpose: formData.purpose,
-        status: paymentStatus // 'Requested' or 'Pending Payment' based on what your groupmate wants
+        status: paymentStatus 
       });
       setAlert({ type: 'success', message: 'Document request sent. Check your dashboard for updates.' });
       setFormData({ certificate_type: '', purpose: '' });
@@ -36,23 +36,55 @@ function ResidentCertificates() {
   };
 
   // 2. Standard "Pay at the Barangay Hall" Submission
-  const handleFreeSubmit = (e) => {
+  const handleFreeSubmit = async (e) => {
     e.preventDefault();
-    saveCertificateRequest('Requested');
+    if (!formData.certificate_type || !formData.purpose) {
+       setAlert({ type: 'error', message: 'Please select both type and purpose.' });
+       return;
+    }
+    setLoading(true);
+    try {
+      await saveCertificateRequest('Requested');
+      setAlert({ type: 'success', message: 'Request sent! Pay at the Barangay Hall.' });
+      setFormData({ certificate_type: '', purpose: '' });
+    } catch (err) {
+      setAlert({ type: 'error', message: 'An error occurred.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 3. Stripe Integration Placeholder for your groupmate
-  const handleStripePayment = (e) => {
+  const handleStripePayment = async (e) => {
     e.preventDefault();
-    
-    // TODO for groupmate: Replace this with the actual Stripe Checkout API call
-    console.log("Redirecting to Stripe Checkout...");
-    window.open('https://buy.stripe.com/test_placeholder', '_blank');
-    
-    // Save the record to the database so the admin knows they requested it
-    saveCertificateRequest('Requested'); 
-  };
+    if (!formData.certificate_type || !formData.purpose) {
+      setAlert({ type: 'error', message: 'Please select both type and purpose.' });
+      return;
+    }
 
+    setLoading(true);
+    try {
+      // COMMENT OUT THESE TWO LINES BELOW:
+      // const res = await saveCertificateRequest('Pending Payment');
+      // const id = res.data.id; 
+
+      // CHANGE THIS PART to use a dummy ID (like '1') so it doesn't crash
+      const stripeRes = await certificatesAPI.initiateStripe({
+        id: 1, // DUMMY ID for testing
+        certificate_type: formData.certificate_type,
+        purpose: formData.purpose, // Add this just in case
+        price: 50
+      });
+
+      if (stripeRes.data.url) {
+        window.location.href = stripeRes.data.url;
+      }
+    } catch (err) {
+      console.log(err); // This will help us see the actual error in console
+      setAlert({ type: 'error', message: 'Stripe failed to load.' });
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="max-w-2xl space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <div>
