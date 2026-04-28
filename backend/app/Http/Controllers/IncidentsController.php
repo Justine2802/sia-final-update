@@ -30,9 +30,10 @@ class IncidentsController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'residents_id'  => 'required|exists:residents,id',
+            'resident_id'  => 'required|exists:residents,id',
             'incident_type' => 'required|in:Theft,Physical Altercation,Noise Complaint,Other',
             'description'   => 'required|string',
+            'status' => 'nullable|string'
         ]);
 
         $incidents = Incidents::create($validated);

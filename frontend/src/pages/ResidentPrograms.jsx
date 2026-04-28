@@ -45,6 +45,7 @@ function ResidentPrograms() {
         program_id: selectedProgram.id,
         status: 'Applied', // Matches your DB Enum
         date_applied: applicationDate,
+        remarks: 'Resident self-application'
       });
       
       alert(`Application for ${selectedProgram.program_name} submitted successfully!`);

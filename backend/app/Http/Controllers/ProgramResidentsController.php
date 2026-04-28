@@ -14,7 +14,8 @@ class ProgramResidentsController extends Controller
      */
     public function index()
     {
-        $prog_res = Program_Residents::all();
+        // Eager load the relationships so React gets the actual names
+        $prog_res = Program_Residents::with(['resident', 'program'])->get();
         return response()->json($prog_res, 200);
     }
 

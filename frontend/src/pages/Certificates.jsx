@@ -30,7 +30,40 @@ const Certificates = () => {
     fetchCertificates();
   }, []);
 
-  // 2. Dynamic Revenue Calculation
+  // 2. ADDED: Process Payment Logic
+  const handleProcessPayment = async (id, certType) => {
+    // Set some default prices based on Philippine standards
+    const defaultAmount = certType === 'Barangay Clearance' ? '150' : '50';
+    
+    // Ask the admin to confirm the amount collected
+    const amountStr = window.prompt(`Confirm payment amount collected for ${certType} (PHP):`, defaultAmount);
+    
+    if (amountStr === null) return; // Admin clicked cancel
+    
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || amount < 0) {
+      alert("Invalid amount entered.");
+      return;
+    }
+
+    try {
+      // Send the update to your Laravel backend
+      await certificatesAPI.update(id, { 
+        status: 'Issued', 
+        amount: amount 
+      });
+      
+      // Update the local UI instantly so the dashboard numbers jump up
+      setRequests(requests.map(req => 
+        req.id === id ? { ...req, status: 'Issued', amount: amount } : req
+      ));
+    } catch (error) {
+      console.error(error);
+      alert("Failed to process payment. Check your database.");
+    }
+  };
+
+  // 3. Dynamic Revenue Calculation
   const calculateDailyCollection = () => {
     const today = new Date().toLocaleDateString();
     return requests
@@ -58,12 +91,6 @@ const Certificates = () => {
           <h1 className="text-2xl font-black text-gray-800 tracking-tight">Certificate Requests</h1>
           <p className="text-gray-500 font-medium">Manage document issuance and payment automation.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 font-black text-[11px] uppercase tracking-widest"
-        >
-          <Plus size={18} /> New Request
-        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -129,12 +156,16 @@ const Certificates = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                         {req.status === 'Requested' ? (
-                          <button className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100" title="Process Payment">
+                          <button 
+                            onClick={() => handleProcessPayment(req.id, req.certificate_type)}
+                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100" 
+                            title="Process Payment"
+                          >
                              <CreditCard size={16} />
                           </button>
                         ) : (
                           <button className="p-2 text-gray-300 hover:text-blue-600 transition">
-                             <MoreVertical size={18} />
+                             <CheckCircle2 size={18} className="text-emerald-500" />
                           </button>
                         )}
                     </td>
@@ -148,7 +179,7 @@ const Certificates = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE: PAYMENT INSIGHTS */}
+        {/* RIGHT SIDE: PAYMENT INSIGHTS (Unchanged) */}
         <div className="space-y-6">
            <div className="bg-blue-600 rounded-[32px] p-8 text-white shadow-xl shadow-blue-200">
               <div className="flex justify-between items-start mb-6">
@@ -163,32 +194,6 @@ const Certificates = () => {
               <h2 className="text-3xl font-black tracking-tight">{formatCurrency(calculateDailyCollection())}</h2>
            </div>
 
-           <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Automated Methods</h3>
-              <div className="space-y-4">
-                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[20px] border border-gray-100">
-                    <div className="flex items-center gap-3">
-                       <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600"><Wallet size={16} /></div>
-                       <span className="text-xs font-black text-gray-700 tracking-tight">GCash Link</span>
-                    </div>
-                    <div className="w-8 h-4 bg-emerald-500 rounded-full relative">
-                       <div className="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                 </div>
-                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[20px] border border-gray-100">
-                    <div className="flex items-center gap-3">
-                       <div className="p-2 bg-white rounded-xl shadow-sm text-gray-400"><CreditCard size={16} /></div>
-                       <span className="text-xs font-black text-gray-700 tracking-tight">Stripe API</span>
-                    </div>
-                    <div className="w-8 h-4 bg-gray-200 rounded-full relative">
-                       <div className="absolute left-1 top-1 w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                 </div>
-              </div>
-              <p className="text-[10px] text-gray-400 mt-6 font-medium leading-relaxed italic">
-                Real-time collection monitoring active for all barangay documents.
-              </p>
-           </div>
         </div>
       </div>
 

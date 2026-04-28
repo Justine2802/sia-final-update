@@ -35,12 +35,19 @@ class ResidentsController extends Controller
         // 1. Validate the incoming React data
         $validated = $request->validate([
             'first_name' => 'required|string|max:50',
+            'middle_name' => 'nullable|string|max:50',
             'last_name' => 'required|string|max:50',
-            'email' => 'required|email|unique:residents,email',
-            'phone' => 'nullable|string|max:20',
             'birth_date' => 'required|date',
+            'gender' => 'required|in:Male,Female',
+            'civil_status' => 'required|in:Single,Married,Widowed,Separated',
+            'phone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:100', // Remove 'unique' rule if updating
             'address' => 'required|string|max:255',
-            'password' => 'required|string|min:6', // React is checking for 6 chars
+            'purok' => 'nullable|string|max:50',
+            'occupation' => 'nullable|string|max:100',
+            'is_voter' => 'required|boolean',
+            'is_verified' => 'required|boolean',
+            'password' => 'nullable|string|min:6'
         ]);
 
         // 2. Create the Resident and HASH the password

@@ -22,7 +22,7 @@ const ResidentIncidents = () => {
       setHistoryLoading(true);
       const response = await incidentsAPI.getAll();
       // Filter for reports belonging to this user
-      const filtered = (response.data || []).filter(inc => inc.resident_id === user?.id);
+      const filtered = (response.data || []).filter(inc => (inc.resident_id || inc.residents_id) === user?.id);
       setMyIncidents(filtered.slice(0, 5)); // Just show the top 5
     } catch (error) {
       console.error("Failed to fetch history:", error);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { certificatesAPI } from '@/services/api';
-import { FileText, Award } from 'lucide-react';
+import { FileText, Award, CreditCard } from 'lucide-react';
 import Alert from '@/components/Alert';
 import { FormSelect } from '@/components/FormFields';
 
@@ -11,15 +11,20 @@ function ResidentCertificates() {
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // 1. Extracted save logic so both buttons can use it
+  const saveCertificateRequest = async (paymentStatus = 'Requested') => {
+    if (!formData.certificate_type || !formData.purpose) {
+      setAlert({ type: 'error', message: 'Please select both a certificate type and purpose.' });
+      return;
+    }
+
     setLoading(true);
     try {
       await certificatesAPI.create({
-        resident_id: user.id, // Map to your Certificates model resident_id
+        resident_id: user.id, 
         certificate_type: formData.certificate_type,
         purpose: formData.purpose,
-        status: 'Requested'
+        status: paymentStatus // 'Requested' or 'Pending Payment' based on what your groupmate wants
       });
       setAlert({ type: 'success', message: 'Document request sent. Check your dashboard for updates.' });
       setFormData({ certificate_type: '', purpose: '' });
@@ -28,6 +33,24 @@ function ResidentCertificates() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 2. Standard "Pay at the Barangay Hall" Submission
+  const handleFreeSubmit = (e) => {
+    e.preventDefault();
+    saveCertificateRequest('Requested');
+  };
+
+  // 3. Stripe Integration Placeholder for your groupmate
+  const handleStripePayment = (e) => {
+    e.preventDefault();
+    
+    // TODO for groupmate: Replace this with the actual Stripe Checkout API call
+    console.log("Redirecting to Stripe Checkout...");
+    window.open('https://buy.stripe.com/test_placeholder', '_blank');
+    
+    // Save the record to the database so the admin knows they requested it
+    saveCertificateRequest('Requested'); 
   };
 
   return (
@@ -39,8 +62,10 @@ function ResidentCertificates() {
         <p className="text-gray-500 font-medium">Request official clearances or certificates.</p>
       </div>
 
+      {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
+
       <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form className="space-y-6">
           <FormSelect
             label="Type of Certificate"
             options={[
@@ -64,20 +89,32 @@ function ResidentCertificates() {
             onChange={(e) => setFormData({...formData, purpose: e.target.value})}
             required
           />
-          <button type="submit" disabled={loading} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2">
-            <FileText size={18} />
-            {loading ? 'PROCESSING...' : 'REQUEST DOCUMENT'}
-          </button>
+          
+          <div className="flex flex-col sm:flex-row gap-4 pt-2">
+            <button 
+              type="button" 
+              onClick={handleFreeSubmit}
+              disabled={loading} 
+              className="flex-1 bg-gray-900 hover:bg-gray-800 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-gray-200 flex items-center justify-center gap-2 text-xs uppercase tracking-widest disabled:opacity-50"
+            >
+              <FileText size={16} />
+              {loading ? 'Processing...' : 'Pay at Hall'}
+            </button>
+
+            <button 
+              type="button" 
+              onClick={handleStripePayment}
+              disabled={loading} 
+              className="flex-[1.5] bg-[#635BFF] hover:bg-[#4B44CC] text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 text-xs uppercase tracking-widest disabled:opacity-50"
+            >
+              <CreditCard size={18} />
+              {loading ? 'Processing...' : 'Pay via Stripe'}
+            </button>
+          </div>
         </form>
       </div>
-      {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
     </div>
   );
 }
 
 export default ResidentCertificates;
-
-
-
-
-

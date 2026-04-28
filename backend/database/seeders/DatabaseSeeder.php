@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,6 +16,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        User::updateOrCreate(
+            ['email' => 'admin@admin.com'], // Checks if this email already exists
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'),
+                'is_admin' => 1,
+            ]
+        );
+
         $this->call([
             ResidentSeeder::class,
             ProgramSeeder::class,
