@@ -22,15 +22,32 @@ const InputField = ({ label, name, type = 'text', value, onChange, error, placeh
   </div>
 );
 
+const SelectField = ({ label, name, value, onChange, options, error }) => (
+  <div className="space-y-1">
+    <label className="block text-sm font-semibold text-gray-700">{label}</label>
+    <select
+      name={name}
+      value={value}
+      onChange={onChange}
+      className={`w-full px-4 py-2 bg-gray-50 border ${error ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm`}
+    >
+      <option value="">Select {label}</option>
+      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+    </select>
+    {error && <p className="text-red-500 text-[10px] mt-0.5 font-bold">{error}</p>}
+  </div>
+);
+
 function RegisterPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState(null);
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', password: '',
-    confirmPassword: '', phone: '', address: '', birthDate: '', agreeTerms: false,
-  });
+    firstName: '', middleName: '', lastName: '', email: '', password: '',
+    confirmPassword: '', phone: '', address: '', birthDate: '', 
+    purok: '', gender: '', civilStatus: '', isVoter: false, agreeTerms: false,
+});
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
@@ -55,11 +72,21 @@ function RegisterPage() {
     if (!validateForm()) return;
     setLoading(true);
     try {
-      const response = await authAPI.registerResident({
-        first_name: formData.firstName, last_name: formData.lastName,
-        email: formData.email, phone: formData.phone || null,
-        birth_date: formData.birthDate, address: formData.address, password: formData.password,
-      });
+        const response = await authAPI.registerResident({
+            first_name: formData.firstName,
+            middle_name: formData.middleName,
+            last_name: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            birth_date: formData.birthDate,
+            address: formData.address,
+            purok: formData.purok,
+            gender: formData.gender,
+            civil_status: formData.civilStatus,
+            is_voter: formData.isVoter ? 1 : 0,
+            is_verified: 0,
+            password: formData.password,
+        });
       const resident = response.data.data;
       login({
         id: resident.id,
@@ -75,11 +102,12 @@ function RegisterPage() {
       setAlert({ type: 'success', message: 'Account created!' });
       setTimeout(() => navigate('/resident-dashboard'), 1500);
     } catch (error) {
-      setAlert({ type: 'error', message: error.response?.data?.message || 'Registration failed' });
+        // This will now catch the "Email already taken" from Laravel validation
+        setAlert({ type: 'error', message: error.response?.data?.message || 'Registration failed' });
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 py-12">
@@ -102,23 +130,40 @@ function RegisterPage() {
           {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            <InputField label="First Name" name="firstName" value={formData.firstName} onChange={handleInputChange} error={errors.firstName} placeholder="John" />
-            <InputField label="Last Name" name="lastName" value={formData.lastName} onChange={handleInputChange} error={errors.lastName} placeholder="Doe" />
-            <InputField label="Email Address" name="email" type="email" value={formData.email} onChange={handleInputChange} error={errors.email} placeholder="john@example.com" />
-            <InputField label="Phone Number" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="09123456789" />
-            <InputField label="Date of Birth" name="birthDate" type="date" value={formData.birthDate} onChange={handleInputChange} />
-            <InputField label="Address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Full Address" />
-            <InputField label="Password" name="password" type="password" value={formData.password} onChange={handleInputChange} error={errors.password} />
-            <InputField label="Confirm Password" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} error={errors.confirmPassword} />
-          </div>
+    <InputField label="First Name" name="firstName" value={formData.firstName} onChange={handleInputChange} error={errors.firstName} placeholder="John" />
+    <InputField label="Middle Name (Optional)" name="middleName" value={formData.middleName} onChange={handleInputChange} placeholder="Quincy" />
+    <InputField label="Last Name" name="lastName" value={formData.lastName} onChange={handleInputChange} error={errors.lastName} placeholder="Doe" />
+    <InputField label="Email Address" name="email" type="email" value={formData.email} onChange={handleInputChange} error={errors.email} placeholder="john@example.com" />
+    
+    <SelectField label="Gender" name="gender" value={formData.gender} onChange={handleInputChange} options={['Male', 'Female']} />
+    <SelectField label="Civil Status" name="civilStatus" value={formData.civilStatus} onChange={handleInputChange} options={['Single', 'Married', 'Widowed', 'Separated']} />
+    
+    <InputField label="Date of Birth" name="birthDate" type="date" value={formData.birthDate} onChange={handleInputChange} />
+    <InputField label="Phone Number" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="09123456789" />
+    
+    <InputField label="Purok" name="purok" value={formData.purok} onChange={handleInputChange} placeholder="Purok 1" />
+    <InputField label="Address" name="address" value={formData.address} onChange={handleInputChange} placeholder="House #, Street Name" />
+    
+    <InputField label="Password" name="password" type="password" value={formData.password} onChange={handleInputChange} error={errors.password} />
+    <InputField label="Confirm Password" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} error={errors.confirmPassword} />
+</div>
 
           <div className="mt-10">
+
+             <label className="flex items-center gap-3 cursor-pointer mb-4">
+    <input type="checkbox" name="isVoter" checked={formData.isVoter} onChange={handleInputChange} className="w-4 h-4 rounded border-gray-300" />
+    <span className="text-xs text-gray-700 font-bold">I am a registered voter in this Barangay</span>
+</label>
+
             <label className="flex items-start gap-3 cursor-pointer group mb-6">
               <input type="checkbox" name="agreeTerms" checked={formData.agreeTerms} onChange={handleInputChange} className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600" />
               <span className="text-xs text-gray-500 leading-relaxed">
                 I agree to the <a href="#" className="text-blue-600 font-bold hover:underline">Terms of Service</a> and <a href="#" className="text-blue-600 font-bold hover:underline">Privacy Policy</a>
               </span>
             </label>
+
+           
+
 
             <button type="submit" disabled={loading} className="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-lg transition-all shadow-lg">
               {loading ? 'Processing...' : 'Register Account'}

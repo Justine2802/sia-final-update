@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Incidents extends Model
 {
-    protected $fillable = ['resident_id', 'incident_type', 'description', 'status'];
+   
+protected $fillable = ['resident_id', 'incident_type', 'description', 'status', 'remarks'];
 
     public function residents()
     {
-        return $this->belongsTo(Residents::class);
+        return $this->belongsTo(Residents::class, 'resident_id');
     }
 }

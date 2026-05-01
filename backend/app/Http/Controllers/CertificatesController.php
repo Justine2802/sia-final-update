@@ -12,6 +12,18 @@ class CertificatesController extends Controller
     /**
      * Display a listing of the resource.
      */
+
+    public function getCollectionStats()
+{
+    // Sum the 'amount' column for all paid/issued certificates today
+    $totalToday = Certificates::whereDate('created_at', today())
+        ->whereIn('status', ['Paid', 'Requested', 'Issued']) 
+        ->sum('amount');
+
+    return response()->json([
+        'collection_today' => $totalToday
+    ]);
+}
     public function index()
     {
         $certificates = Certificates::with('resident')->get();
@@ -29,73 +41,38 @@ class CertificatesController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'resident_id'      => 'required|exists:residents,id',
-            'certificate_type' => 'required|in:Barangay Clearance,Indigency,Residency',
-            'purpose'          => 'required|in:Employment,Education,Legal,General',
-        ]);
+   public function update(Request $request, $id)
+{
+    // 1. Manually find the existing record by ID
+    $certificate = Certificates::find($id);
 
-        $certificates = Certificates::create($validated);
-
-        return response()->json([
-            'message' => 'Certificate request submitted successfully.',
-            'data' => $certificates
-        ], 201);
+    if (!$certificate) {
+        return response()->json(['message' => 'Certificate not found'], 404);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Certificates $certificates)
-    {
-        return response()->json($certificates->load('resident'), 200);
+    // 2. Validate incoming data
+    $validated = $request->validate([
+        'status' => 'required|string',
+        'amount' => 'nullable|numeric'
+    ]);
+
+    // 3. Update the existing instance (DO NOT use Certificates::create)
+    $certificate->status = $validated['status'];
+    
+    if ($request->has('amount')) {
+        $certificate->amount = $validated['amount'];
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Certificates $certificates)
-    {
-        //
+    if ($validated['status'] === 'Issued') {
+        $certificate->issued_at = \Carbon\Carbon::now();
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Certificates $certificates)
-    {
-        $validated = $request->validate([
-            'status' => 'required|in:Requested,Processing,Issued,Denied',
-        ]);
+    // 4. Save the existing record (this runs an UPDATE query)
+    $certificate->save();
 
-        $certificates->status = $validated['status'];
-
-        if ($validated['status'] === 'Issued') {
-            $certificates->issued_at = Carbon::now();
-            
-            /*
-              INTEGRATION POINT: Notification Service
-              Here you would trigger: Mail::to($certificates->resident->email)->send(...);
-              As per project requirement 4.3 (Notification Service Integration)
-            */
-        }
-
-        $certificates->save();
-
-        return response()->json([
-            'message' => 'Certificate status updated.',
-            'data' => $certificates
-        ], 200);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Certificates $certificates)
-    {
-        $certificates->delete();
-        return response()->json(['message' => 'Request deleted.'], 200);
-    }
+    return response()->json([
+        'message' => 'Certificate updated successfully.',
+        'data' => $certificate
+    ], 200);
+}
 }

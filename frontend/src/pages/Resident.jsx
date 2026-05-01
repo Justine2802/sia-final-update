@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Phone, MapPin, Calendar, ShieldCheck } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, ShieldCheck, Home, Briefcase, Users } from 'lucide-react';
 
 function ResidentPage() {
   const { user } = useAuth();
@@ -17,6 +17,16 @@ function ResidentPage() {
     </div>
   );
 
+  // Formats backend date "YYYY-MM-DD" to "Month DD, YYYY"
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not provided';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -31,20 +41,36 @@ function ResidentPage() {
           <div className="relative flex justify-between items-end -mt-12 mb-8">
             <div className="w-24 h-24 rounded-3xl bg-white p-1.5 shadow-lg">
               <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black text-2xl">
-                {user?.name.charAt(0)}
+                {user?.name?.charAt(0) || 'U'}
               </div>
             </div>
-            <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl text-xs font-black border border-emerald-100 shadow-sm">
-              <ShieldCheck size={16} /> VERIFIED CITIZEN
-            </span>
+            
+            {/* Dynamic Verification Badge */}
+            {user?.is_verified ? (
+              <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl text-xs font-black border border-emerald-100 shadow-sm">
+                <ShieldCheck size={16} /> VERIFIED CITIZEN
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-4 py-2 rounded-xl text-xs font-black border border-amber-100 shadow-sm">
+                <ShieldCheck size={16} /> PENDING VERIFICATION
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <InfoBlock icon={User} label="Full Name" value={user?.name} />
             <InfoBlock icon={Mail} label="Email Address" value={user?.email} />
-            <InfoBlock icon={Phone} label="Contact Number" value="+63 912 345 6789" />
-            <InfoBlock icon={Calendar} label="Date of Birth" value="May 15, 1990" />
-            <InfoBlock icon={MapPin} label="Home Address" value="123 Main Street, Barangay, City" />
+            <InfoBlock icon={Phone} label="Contact Number" value={user?.phone} />
+            <InfoBlock icon={Calendar} label="Date of Birth" value={formatDate(user?.birth_date)} />
+            <InfoBlock icon={Users} label="Civil Status" value={user?.civil_status} />
+            <InfoBlock icon={Briefcase} label="Occupation" value={user?.occupation} />
+            <InfoBlock icon={Home} label="Purok" value={user?.purok} />
+            <InfoBlock icon={MapPin} label="Home Address" value={user?.address} />
+            <InfoBlock 
+                icon={ShieldCheck} 
+                label="Voter Status" 
+                value={user?.is_voter ? "Registered Voter" : "Not a Voter"} 
+            />
           </div>
         </div>
       </div>
@@ -53,23 +79,3 @@ function ResidentPage() {
 }
 
 export default ResidentPage;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

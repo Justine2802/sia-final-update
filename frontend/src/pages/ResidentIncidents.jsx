@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, Phone, ShieldAlert, CheckCircle2, Clock } from 'lucide-react';
+import { Send, Phone, ShieldAlert, CheckCircle2, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { incidentsAPI } from '@/services/api';
 import Alert from '@/components/Alert';
@@ -16,14 +16,19 @@ const ResidentIncidents = () => {
     description: ''
   });
 
-  // 1. Fetch this specific resident's incident history
   const fetchMyHistory = async () => {
     try {
       setHistoryLoading(true);
       const response = await incidentsAPI.getAll();
-      // Filter for reports belonging to this user
-      const filtered = (response.data || []).filter(inc => (inc.resident_id || inc.residents_id) === user?.id);
-      setMyIncidents(filtered.slice(0, 5)); // Just show the top 5
+      // Filters incidents by matching the logged-in user's ID
+      // We check for both resident_id and residents_id to be safe
+      const filtered = (response.data || []).filter(inc => 
+        (inc.resident_id === user?.id || inc.residents_id === user?.id)
+      );
+      
+      // Sort by newest first and take top 5
+      const sorted = filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setMyIncidents(sorted.slice(0, 5));
     } catch (error) {
       console.error("Failed to fetch history:", error);
     } finally {
@@ -35,9 +40,9 @@ const ResidentIncidents = () => {
     if (user?.id) fetchMyHistory();
   }, [user?.id]);
 
-  // 2. Handle Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (!formData.incident_type || !formData.description) {
       setAlert({ type: 'error', message: 'Please fill in all fields.' });
       return;
@@ -45,18 +50,24 @@ const ResidentIncidents = () => {
 
     setLoading(true);
     try {
-      await incidentsAPI.create({
+      const payload = {
         resident_id: user.id,
         incident_type: formData.incident_type,
         description: formData.description,
-        status: 'Pending'
-      });
+        status: 'PENDING' 
+      };
+
+      await incidentsAPI.create(payload);
       
       setAlert({ type: 'success', message: 'Report submitted successfully!' });
       setFormData({ incident_type: '', description: '' });
-      fetchMyHistory(); // Refresh history list
+      fetchMyHistory(); 
     } catch (error) {
-      setAlert({ type: 'error', message: 'Failed to submit report.' });
+      console.error("Submission Error:", error.response?.data);
+      setAlert({ 
+        type: 'error', 
+        message: error.response?.data?.message || 'Failed to submit report.' 
+      });
     } finally {
       setLoading(false);
     }
@@ -77,17 +88,17 @@ const ResidentIncidents = () => {
       {alert && <div className="mb-6"><Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} /></div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT SIDE: THE FORM */}
+        {/* LEFT: FORM */}
         <form onSubmit={handleSubmit} className="lg:col-span-2 bg-white rounded-[40px] p-10 border border-gray-100 shadow-sm h-fit">
           <div className="space-y-6">
             <div>
-              <label className="block text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">What happened?</label>
+              <label className="block text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Incident Type</label>
               <select 
                 value={formData.incident_type}
                 onChange={(e) => setFormData({...formData, incident_type: e.target.value})}
                 className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-[20px] font-bold text-gray-700 focus:ring-4 focus:ring-orange-500/5 transition outline-none"
               >
-                <option value="">-- Select --</option>
+                <option value="">-- Select Type --</option>
                 <option value="Theft">Theft</option>
                 <option value="Physical Altercation">Physical Altercation</option>
                 <option value="Noise Complaint">Noise Complaint</option>
@@ -102,7 +113,7 @@ const ResidentIncidents = () => {
                 rows="6"
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Type your detailed report here..."
+                placeholder="Describe the incident, location, and individuals involved..."
                 className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-[24px] font-medium text-gray-700 focus:ring-4 focus:ring-orange-500/5 transition resize-none outline-none"
               ></textarea>
             </div>
@@ -118,7 +129,7 @@ const ResidentIncidents = () => {
           </div>
         </form>
 
-        {/* RIGHT SIDE: SIDEBAR */}
+        {/* RIGHT: TRACKING SIDEBAR */}
         <div className="space-y-6">
           <div className="bg-gray-900 rounded-[32px] p-6 text-white shadow-xl">
             <h3 className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-4">Emergency Hotlines</h3>
@@ -130,37 +141,54 @@ const ResidentIncidents = () => {
                 </div>
                 <span className="text-xs font-black text-orange-400">911-BRGY</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/20 text-blue-500 rounded-lg"><Phone size={16}/></div>
-                    <span className="text-xs font-bold">Local Police</span>
-                </div>
-                <span className="text-xs font-black text-blue-400">117</span>
-              </div>
             </div>
           </div>
 
           <div className="bg-white rounded-[32px] p-6 border border-gray-100 shadow-sm">
-            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Your Recent Reports</h3>
-            <div className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tracking Your Reports</h3>
+               <button onClick={fetchMyHistory} className="text-gray-400 hover:text-orange-500 transition">
+                 <RefreshCw size={14} className={historyLoading ? 'animate-spin' : ''} />
+               </button>
+            </div>
+            
+            <div className="space-y-6">
               {historyLoading ? (
-                <p className="text-xs text-gray-400 italic">Loading history...</p>
+                <p className="text-xs text-gray-400 italic text-center py-4">Syncing with registry...</p>
               ) : myIncidents.length > 0 ? (
                 myIncidents.map((inc) => (
-                  <div key={inc.id} className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${inc.status === 'Resolved' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
-                      {inc.status === 'Resolved' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                  <div key={inc.id} className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${inc.status?.toUpperCase() === 'RESOLVED' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
+                        {inc.status?.toUpperCase() === 'RESOLVED' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-gray-800">{inc.incident_type}</p>
+                        <p className={`text-[10px] uppercase font-black tracking-tighter ${inc.status?.toUpperCase() === 'RESOLVED' ? 'text-emerald-600' : 'text-orange-500'}`}>
+                          {inc.status} • {new Date(inc.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-800">{inc.incident_type}</p>
-                      <p className={`text-[10px] uppercase font-black tracking-tighter ${inc.status === 'Resolved' ? 'text-emerald-600' : 'text-gray-400'}`}>
-                        {new Date(inc.created_at).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})} • {inc.status}
-                      </p>
-                    </div>
+                    
+                    {inc.remarks && (
+                      <div className="ml-11 p-3 bg-gray-50 rounded-2xl border border-gray-100 relative">
+                        <div className="absolute -left-2 top-3 w-4 h-4 bg-gray-50 border-l border-t border-gray-100 rotate-45"></div>
+                        <div className="flex items-start gap-2">
+                          <MessageSquare size={12} className="text-orange-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Official Response:</p>
+                            <p className="text-[10px] text-gray-600 font-medium leading-relaxed italic">"{inc.remarks}"</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-gray-400 italic">No reports filed yet.</p>
+                <div className="text-center py-8">
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Safe & Clear</p>
+                  <p className="text-[10px] text-gray-400 mt-1">No community reports filed yet.</p>
+                </div>
               )}
             </div>
           </div>

@@ -31,42 +31,44 @@ class ResidentsController extends Controller
      * Register a new resident
      */
     public function register(Request $request)
-    {
-        // 1. Validate the incoming React data
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:50',
-            'middle_name' => 'nullable|string|max:50',
-            'last_name' => 'required|string|max:50',
-            'birth_date' => 'required|date',
-            'gender' => 'required|in:Male,Female',
-            'civil_status' => 'required|in:Single,Married,Widowed,Separated',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:100', // Remove 'unique' rule if updating
-            'address' => 'required|string|max:255',
-            'purok' => 'nullable|string|max:50',
-            'occupation' => 'nullable|string|max:100',
-            'is_voter' => 'required|boolean',
-            'is_verified' => 'required|boolean',
-            'password' => 'nullable|string|min:6'
-        ]);
+{
+    // Added 'unique' rule to email and added missing fields to validation
+    $validated = $request->validate([
+        'first_name'   => 'required|string|max:50',
+        'middle_name'  => 'nullable|string|max:50',
+        'last_name'    => 'required|string|max:50',
+        'birth_date'   => 'required|date',
+        'gender'       => 'required|in:Male,Female',
+        'civil_status' => 'required|in:Single,Married,Widowed,Separated',
+        'phone'        => 'nullable|string|max:20',
+        'email'        => 'required|email|max:100|unique:residents,email', // CRITICAL FIX
+        'address'      => 'required|string|max:255',
+        'purok'        => 'required|string|max:50',
+        'is_voter'     => 'required|boolean',
+        'password'     => 'required|string|min:6'
+    ]);
 
-        // 2. Create the Resident and HASH the password
-        $resident = Residents::create([
-            'first_name' => $validated['first_name'],
-            'last_name' => $validated['last_name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
-            'birth_date' => date('Y-m-d H:i:s', strtotime($validated['birth_date'])),
-            'address' => $validated['address'],
-            'password' => Hash::make($validated['password']), // NEVER save raw passwords!
-        ]);
+    $resident = Residents::create([
+        'first_name'   => $validated['first_name'],
+        'middle_name'  => $validated['middle_name'] ?? null,
+        'last_name'    => $validated['last_name'],
+        'email'        => $validated['email'],
+        'phone'        => $validated['phone'] ?? null,
+        'birth_date'   => $validated['birth_date'],
+        'address'      => $validated['address'],
+        'purok'        => $validated['purok'],
+        'gender'       => $validated['gender'],
+        'civil_status' => $validated['civil_status'],
+        'is_voter'     => $validated['is_voter'],
+        'is_verified'  => false, // Default to false for new registrations
+        'password'     => Hash::make($validated['password']),
+    ]);
 
-        // 3. Return the response in the exact format React is expecting
-        return response()->json([
-            'message' => 'Account created successfully',
-            'data' => $resident
-        ], 201);
-    }
+    return response()->json([
+        'message' => 'Account created successfully',
+        'data' => $resident
+    ], 201);
+}
 
     // This function will get the history for a specific resident
 public function getActivityHistory($id)
@@ -83,25 +85,26 @@ public function getActivityHistory($id)
      * Login resident
      */
     public function login(Request $request)
-    {
-        $validated = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
-        ]);
+{
+    $validated = $request->validate([
+        'email'    => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        $resident = Residents::where('email', $validated['email'])->first();
+    $resident = Residents::where('email', $validated['email'])->first();
 
-        if (!$resident || !Hash::check($validated['password'], $resident->password)) {
-            return response()->json([
-                'message' => 'Invalid credentials'
-            ], 401);
-        }
-
+    // Debugging tip: if this fails, check if the password in the DB starts with '$2y$'
+    if (!$resident || !Hash::check($validated['password'], $resident->password)) {
         return response()->json([
-            'message' => 'Login successful',
-            'data' => $resident
-        ], 200);
+            'message' => 'Invalid credentials'
+        ], 401);
     }
+
+    return response()->json([
+        'message' => 'Login successful',
+        'data' => $resident
+    ], 200);
+}
 
     /**
      * Store a newly created resource in storage.

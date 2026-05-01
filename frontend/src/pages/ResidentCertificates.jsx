@@ -11,10 +11,21 @@ function ResidentCertificates() {
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 1. Extracted save logic so both buttons can use it
-  const saveCertificateRequest = async (paymentStatus = 'Requested') => {
+  // Price mapping to match the database and Stripe logic
+  const priceMap = {
+    'Barangay Clearance': 150,
+    'Indigency': 50,
+    'Residency': 75
+  };
+
+  /**
+   * Standard "Pay at the Barangay Hall" Submission
+   * Creates a record directly with 'Requested' status.
+   */
+  const handleFreeSubmit = async (e) => {
+    e.preventDefault();
     if (!formData.certificate_type || !formData.purpose) {
-      setAlert({ type: 'error', message: 'Please select both a certificate type and purpose.' });
+      setAlert({ type: 'error', message: 'Please select both type and purpose.' });
       return;
     }
 
@@ -24,36 +35,41 @@ function ResidentCertificates() {
         resident_id: user.id, 
         certificate_type: formData.certificate_type,
         purpose: formData.purpose,
-        status: paymentStatus 
+        amount: priceMap[formData.certificate_type] || 0,
+        status: 'Requested' 
       });
-      setAlert({ type: 'success', message: 'Document request sent. Check your dashboard for updates.' });
+
+      setAlert({ type: 'success', message: 'Request sent! Please pay at the Barangay Hall.' });
       setFormData({ certificate_type: '', purpose: '' });
     } catch (err) {
+      console.error(err);
       setAlert({ type: 'error', message: 'An error occurred. Check if you have pending requests.' });
     } finally {
       setLoading(false);
     }
   };
-
-  // 2. Standard "Pay at the Barangay Hall" Submission
-  const handleFreeSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.certificate_type || !formData.purpose) {
-       setAlert({ type: 'error', message: 'Please select both type and purpose.' });
-       return;
-    }
-    setLoading(true);
+  const handlePayment = async (cert) => {
     try {
-      await saveCertificateRequest('Requested');
-      setAlert({ type: 'success', message: 'Request sent! Pay at the Barangay Hall.' });
-      setFormData({ certificate_type: '', purpose: '' });
-    } catch (err) {
-      setAlert({ type: 'error', message: 'An error occurred.' });
-    } finally {
-      setLoading(false);
+        const response = await axios.post('/api/automation/stripe-checkout', {
+            cert_id: cert.id, // Pass the existing ID
+            resident_id: cert.resident_id,
+            certificate_type: cert.certificate_type,
+            purpose: cert.purpose,
+            price: cert.amount // Ensure this matches $request->price in Laravel
+        });
+        
+        if (response.data.url) {
+            window.location.href = response.data.url;
+        }
+    } catch (error) {
+        console.error("Stripe Initialization Error:", error);
     }
-  };
+};
 
+  /**
+   * Stripe Payment Submission
+   * Calls the backend to generate a Stripe Session URL, then redirects.
+   */
   const handleStripePayment = async (e) => {
     e.preventDefault();
     if (!formData.certificate_type || !formData.purpose) {
@@ -63,28 +79,33 @@ function ResidentCertificates() {
 
     setLoading(true);
     try {
-      // COMMENT OUT THESE TWO LINES BELOW:
-      // const res = await saveCertificateRequest('Pending Payment');
-      // const id = res.data.id; 
-
-      // CHANGE THIS PART to use a dummy ID (like '1') so it doesn't crash
+      // We send the data to the backend. The backend handles creating the 
+      // 'Pending Payment' record and generating the Stripe Session.
       const stripeRes = await certificatesAPI.initiateStripe({
-        id: 1, // DUMMY ID for testing
+        resident_id: user.id,
         certificate_type: formData.certificate_type,
-        purpose: formData.purpose, // Add this just in case
-        price: 50
+        purpose: formData.purpose,
+        price: priceMap[formData.certificate_type] || 50
       });
 
-      if (stripeRes.data.url) {
+      // CRITICAL: Check if the backend returned a valid Stripe URL
+      if (stripeRes.data && stripeRes.data.url) {
+        // This is what makes "something happen" by navigating away to Stripe
         window.location.href = stripeRes.data.url;
+      } else {
+        throw new Error("No redirection URL received from server.");
       }
     } catch (err) {
-      console.log(err); // This will help us see the actual error in console
-      setAlert({ type: 'error', message: 'Stripe failed to load.' });
+      console.error("Stripe Initialization Error:", err);
+      setAlert({ 
+        type: 'error', 
+        message: err.response?.data?.message || 'Stripe failed to load. Please try again later.' 
+      });
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <div className="max-w-2xl space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -101,9 +122,9 @@ function ResidentCertificates() {
           <FormSelect
             label="Type of Certificate"
             options={[
-              { label: 'Barangay Clearance', value: 'Barangay Clearance' },
-              { label: 'Indigency Certificate', value: 'Indigency' },
-              { label: 'Residency Certificate', value: 'Residency' },
+              { label: 'Barangay Clearance (₱150)', value: 'Barangay Clearance' },
+              { label: 'Indigency Certificate (₱50)', value: 'Indigency' },
+              { label: 'Residency Certificate (₱75)', value: 'Residency' },
             ]}
             value={formData.certificate_type}
             onChange={(e) => setFormData({...formData, certificate_type: e.target.value})}

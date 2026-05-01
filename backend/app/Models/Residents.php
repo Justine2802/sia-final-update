@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory; // 1. Must be imported
-use Illuminate\Foundation\Auth\User as Authenticatable;
+// Change this line to include the Authenticatable alias
+use Illuminate\Foundation\Auth\User as Authenticatable; 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-
-class Residents extends Model
+// Change "extends Model" to "extends Authenticatable"
+class Residents extends Authenticatable 
 {
     use HasApiTokens, HasFactory, Notifiable;
+
     protected $fillable = [
         'first_name', 
         'middle_name', 
@@ -25,15 +26,12 @@ class Residents extends Model
         'purok', 
         'occupation', 
         'is_voter',
-        'is_verified'
+        'is_verified',
+        'password' 
     ];
 
     protected $hidden = [
         'password',
+        'remember_token',
     ];
-
-    public function activities()
-{
-    return $this->hasMany(ResidentActivity::class)->latest();
-}
 }

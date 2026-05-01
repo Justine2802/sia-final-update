@@ -9,7 +9,7 @@ class Program_Residents extends Model
 {
     use HasFactory;
 
-    // Optional: Explicitly define the table name just in case Laravel gets confused by the underscore
+    
     protected $table = 'program_resident';
 
     protected $fillable = [

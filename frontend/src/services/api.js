@@ -44,7 +44,7 @@ export const certificatesAPI = {
   update: (id, data) => api.put(`/admin/certificates/${id}`, data),
   delete: (id) => api.delete(`/admin/certificates/${id}`),
 
-  initiateStripe: (paymentData) => api.post('/api/automation/stripe-checkout', paymentData),
+  initiateStripe: (data) => axios.post('/api/automation/stripe-checkout', data),
 };
 
 // Enrollments API

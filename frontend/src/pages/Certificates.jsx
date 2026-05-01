@@ -30,15 +30,14 @@ const Certificates = () => {
     fetchCertificates();
   }, []);
 
-  // 2. ADDED: Process Payment Logic
+  // 2. FIXED: Process Payment Logic (Matches Updated Controller)
   const handleProcessPayment = async (id, certType) => {
-    // Set some default prices based on Philippine standards
+    // Default prices
     const defaultAmount = certType === 'Barangay Clearance' ? '150' : '50';
     
-    // Ask the admin to confirm the amount collected
     const amountStr = window.prompt(`Confirm payment amount collected for ${certType} (PHP):`, defaultAmount);
     
-    if (amountStr === null) return; // Admin clicked cancel
+    if (amountStr === null) return; 
     
     const amount = parseFloat(amountStr);
     if (isNaN(amount) || amount < 0) {
@@ -47,30 +46,33 @@ const Certificates = () => {
     }
 
     try {
-      // Send the update to your Laravel backend
+      // FIX: Ensure your API service is calling PUT http://localhost:8000/api/admin/certificates/{id}
       await certificatesAPI.update(id, { 
         status: 'Issued', 
         amount: amount 
       });
       
-      // Update the local UI instantly so the dashboard numbers jump up
-      setRequests(requests.map(req => 
+      // Update the local list instantly
+      setRequests(prev => prev.map(req => 
         req.id === id ? { ...req, status: 'Issued', amount: amount } : req
       ));
+
+      alert("Payment processed and certificate issued!");
     } catch (error) {
-      console.error(error);
-      alert("Failed to process payment. Check your database.");
+      // LOG THE ACTUAL ERROR: This helps find the 500 cause in the Network Tab
+      console.error("Payment Error Response:", error.response?.data);
+      alert(error.response?.data?.message || "Failed to process payment. Check your database migrations and $fillable array.");
     }
   };
 
-  // 3. Dynamic Revenue Calculation
+  // 3. FIXED: Revenue Calculation (Includes Paid and Issued)
   const calculateDailyCollection = () => {
     const today = new Date().toLocaleDateString();
     return requests
-      .filter(req => 
-        new Date(req.created_at).toLocaleDateString() === today && 
-        (req.status === 'Issued' || req.status === 'Ready for Pickup')
-      )
+      .filter(req => {
+        const reqDate = new Date(req.created_at).toLocaleDateString();
+        return reqDate === today && (req.status === 'Issued' || req.status === 'Requested');
+      })
       .reduce((sum, req) => sum + parseFloat(req.amount || 0), 0);
   };
 
@@ -155,7 +157,8 @@ const Certificates = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                        {req.status === 'Requested' ? (
+                        {/* Only show payment button if not already issued */}
+                        {req.status !== 'Issued' ? (
                           <button 
                             onClick={() => handleProcessPayment(req.id, req.certificate_type)}
                             className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100" 
@@ -164,9 +167,9 @@ const Certificates = () => {
                              <CreditCard size={16} />
                           </button>
                         ) : (
-                          <button className="p-2 text-gray-300 hover:text-blue-600 transition">
+                          <div className="p-2 flex justify-end">
                              <CheckCircle2 size={18} className="text-emerald-500" />
-                          </button>
+                          </div>
                         )}
                     </td>
                   </tr>
@@ -179,7 +182,7 @@ const Certificates = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE: PAYMENT INSIGHTS (Unchanged) */}
+        {/* RIGHT SIDE: PAYMENT INSIGHTS */}
         <div className="space-y-6">
            <div className="bg-blue-600 rounded-[32px] p-8 text-white shadow-xl shadow-blue-200">
               <div className="flex justify-between items-start mb-6">
@@ -193,7 +196,6 @@ const Certificates = () => {
               <p className="text-blue-100 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Collection Today</p>
               <h2 className="text-3xl font-black tracking-tight">{formatCurrency(calculateDailyCollection())}</h2>
            </div>
-
         </div>
       </div>
 
