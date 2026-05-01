@@ -40,8 +40,22 @@ composer install
 cp .env.example .env
 php artisan key:generate
 php artisan migrate
-php artisan serve
+php artisan db:seed
 ```
+
+CRITICAL: You must manually open the new .env file and add your Stripe Keys (STRIPE_KEY and STRIPE_SECRET). 
+Without this, the other device will get the "Stripe failed to load" error again.
+/backend/.env
+STRIPE_KEY=pk_
+STRIPE_SECRET=
+
+**Note:** if composer install fails or the app can't write logs,
+go to backend/bootstrap/cache
+add file inside cache .gitignore
+in file explorer go to xampp/htdocs/backend/sia-final-update/backend
+right click the bootstrap, click properties, uncheck the read-only, click ok
+:same process with backend/storage
+
 
 The API runs on `http://localhost:8000`
 
